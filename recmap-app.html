@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<meta name="theme-color" content="#0F6B66">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>RECMAP</title>
+<style>
+:root{
+  --porcelana:#F5F5F7;
+  --branco:#FFFFFF;
+  --grafite:#1D1D1F;
+  --cinza:#6E6E73;
+  --linha:#E3E3E8;
+  --mare:#0F6B66;
+  --mare-escuro:#0A4F4B;
+  --mare-suave:#E3F0EE;
+  --dourado:#B8925A;
+  --dourado-suave:#F4ECDD;
+  --nevoa:#E8EEEC;
+  --agua:#CFE0E6;
+  --sombra:0 10px 30px rgba(29,29,31,.08);
+  --vidro:rgba(255,255,255,.86);--chave-off:#D1D1D6;--seg:#E3E3E8;--pagina:#DCDCE0;--ctl:#1D1D1F;--ctl-t:#fff;--on-mare:#fff;--borda:transparent;
+  --m-bg:#E8EEEC;--m-agua:#CFE0E6;--m-parque:#D5E6D8;--m-quadra:#F7F7F5;--m-qb:transparent;--m-rua:#fff;
+  --papel:#FBF9F4;--papel-linha:#E4DFD3;--guil:rgba(15,107,102,.07);--tinta1:#0F6B66;--tinta2:#A5792F;
+  --fonte:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter","Helvetica Neue",Arial,sans-serif;
+}
+body[data-tema="escuro"]{--porcelana:#000;--branco:#1C1C1E;--grafite:#F5F5F7;--cinza:#9A9AA2;--linha:#38383A;--mare:#45BDB0;--mare-suave:#12332F;--dourado:#D9B77E;--dourado-suave:#2B2418;--sombra:0 10px 30px rgba(0,0,0,.5);--vidro:rgba(28,28,30,.82);--chave-off:#48484A;--seg:#2C2C2E;--pagina:#0E0E10;--ctl:#F5F5F7;--ctl-t:#1D1D1F;--on-mare:#04201E;--borda:rgba(255,255,255,.07);--m-bg:#16201E;--m-agua:#1B3340;--m-parque:#1D3325;--m-quadra:#232B2A;--m-rua:#34403E;--papel:#26292B;--papel-linha:#3A3E40;--guil:rgba(69,189,176,.08);--tinta1:#5CCFC1;--tinta2:#E0BE86}
+body[data-tema="contraste"]{--porcelana:#fff;--branco:#fff;--grafite:#000;--cinza:#1A1A1A;--linha:#000;--mare:#00504B;--mare-suave:#D6EFEC;--dourado:#7A5200;--dourado-suave:#FFF1CC;--sombra:none;--vidro:#fff;--chave-off:#767676;--seg:#D9D9D9;--pagina:#BDBDBD;--ctl:#000;--ctl-t:#fff;--on-mare:#fff;--borda:#000;--m-bg:#F2F2F2;--m-agua:#B3D9F2;--m-parque:#BFE6C4;--m-quadra:#fff;--m-qb:#000;--m-rua:#BDBDBD;--papel:#fff;--papel-linha:#000;--guil:rgba(0,0,0,.06);--tinta1:#003B37;--tinta2:#6B4500}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--fonte);
+  background:var(--pagina);
+  color:var(--grafite);
+  -webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column;align-items:center;
+  padding:28px 20px 40px;gap:22px;
+}
+button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--mare);outline-offset:2px}
+
+/* Barra de controle do protótipo */
+.controle{display:flex;gap:10px;align-items:center}
+.controle button{
+  background:var(--ctl);color:var(--ctl-t);font-size:14px;font-weight:600;
+  padding:10px 18px;border-radius:980px;
+}
+.controle span{font-size:13px;color:var(--cinza)}
+
+.palco{display:flex;gap:32px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+body:not(.quadro) .phone:not(.ativo){display:none}
+
+/* Aparelho */
+.phone{
+  position:relative;width:390px;height:844px;border-radius:52px;
+  background:var(--porcelana);overflow:hidden;flex:none;
+  box-shadow:0 0 0 10px #101012,0 30px 60px rgba(0,0,0,.28);
+}
+.ilha{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:118px;height:34px;border-radius:20px;background:#000;z-index:30}
+.status{position:absolute;top:0;left:0;right:0;height:54px;padding:18px 34px 0;display:flex;justify-content:space-between;font-size:16px;font-weight:600;z-index:20}
+.status i{font-style:normal;font-size:13px;letter-spacing:1px}
+.conteudo{position:absolute;top:54px;left:0;right:0;bottom:0;overflow:hidden}
+
+/* Barra de abas */
+.abas{
+  position:absolute;left:14px;right:14px;bottom:18px;height:74px;border-radius:28px;
+  background:var(--vidro);
+  -webkit-backdrop-filter:saturate(180%) blur(22px);backdrop-filter:saturate(180%) blur(22px);
+  box-shadow:0 8px 28px rgba(29,29,31,.14),0 0 0 1px rgba(255,255,255,.7) inset;
+  display:flex;padding:8px;gap:4px;z-index:25;
+}
+.aba{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:20px;font-size:11px;font-weight:600;color:var(--cinza);transition:background .2s,color .2s}
+.aba svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.aba.on{background:var(--mare-suave);color:var(--mare)}
+
+/* Títulos grandes estilo iOS */
+.tela{position:absolute;inset:0;padding:12px 20px 110px;overflow-y:auto}
+.titulo{font-size:34px;font-weight:700;letter-spacing:-.8px;line-height:1.1;margin-top:8px}
+.sub{font-size:16px;color:var(--cinza);margin-top:6px;line-height:1.35}
+
+/* ---------- MAPA ---------- */
+.tela.mapa{padding:0;overflow:hidden}
+.mapa-fundo{position:absolute;inset:-54px 0 0 0}
+.mapa-fundo svg{width:100%;height:100%;display:block}
+.busca{
+  position:absolute;top:10px;left:16px;right:16px;height:52px;border-radius:18px;
+  background:var(--vidro);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+  box-shadow:0 6px 22px rgba(29,29,31,.14);display:flex;align-items:center;gap:10px;padding:0 16px;
+}
+.busca svg{width:20px;height:20px;stroke:var(--cinza);fill:none;stroke-width:2;stroke-linecap:round}
+.busca input{flex:1;border:0;background:none;font:inherit;font-size:17px;color:var(--grafite)}
+.busca input::placeholder{color:#8E8E93}
+.filtros{position:absolute;top:72px;left:16px;right:16px;display:flex;gap:8px}
+.chip{background:var(--vidro);padding:8px 14px;border-radius:980px;font-size:13px;font-weight:600;box-shadow:0 3px 12px rgba(29,29,31,.1);color:var(--grafite)}
+.chip.on{background:var(--mare);color:var(--on-mare)}
+.legenda{position:absolute;right:16px;top:124px;background:var(--vidro);border-radius:14px;padding:10px 12px;box-shadow:0 3px 12px rgba(29,29,31,.1);font-size:12px;font-weight:500;display:flex;flex-direction:column;gap:7px}
+.legenda div{display:flex;align-items:center;gap:8px}
+.legenda b{display:block;width:18px;height:4px;border-radius:2px;background:var(--mare)}
+.legenda b.alerta{background:var(--dourado)}
+.cartao-lugar{
+  position:absolute;left:14px;right:14px;bottom:108px;border-radius:26px;padding:18px;
+  background:var(--vidro);
+  -webkit-backdrop-filter:saturate(180%) blur(22px);backdrop-filter:saturate(180%) blur(22px);
+  box-shadow:0 14px 36px rgba(29,29,31,.18);
+}
+.cartao-lugar h3{font-size:20px;font-weight:700;letter-spacing:-.3px}
+.cartao-lugar p{font-size:14px;color:var(--cinza);margin-top:3px}
+.selos{display:flex;gap:6px;margin:12px 0 14px;flex-wrap:wrap}
+.selo{font-size:12px;font-weight:600;color:var(--mare);background:var(--mare-suave);padding:6px 10px;border-radius:980px}
+.btn{display:block;width:100%;height:50px;border-radius:16px;background:var(--mare);color:var(--on-mare);font-size:17px;font-weight:600}
+.btn.sec{background:var(--mare-suave);color:var(--mare)}
+
+/* ---------- LIVRO DE CARIMBOS ---------- */
+.livro{position:relative;margin:22px 8px 0 6px;height:464px;perspective:1600px}
+.livro::before{content:"";position:absolute;inset:-6px -8px -8px -7px;border-radius:8px 20px 20px 8px;background:linear-gradient(135deg,#14625D,#0A3F3C);box-shadow:0 18px 36px rgba(0,0,0,.3)}
+.livro::after{content:"";position:absolute;top:5px;bottom:-1px;right:-4px;width:6px;border-radius:0 6px 6px 0;background:repeating-linear-gradient(0deg,var(--papel) 0 2px,var(--papel-linha) 2px 3px)}
+.miolo{position:absolute;inset:0;z-index:2}
+.folha{position:absolute;inset:0;border-radius:3px 14px 14px 3px;background:var(--papel);transform-origin:left center;transition:transform .8s cubic-bezier(.5,.1,.2,1),opacity .25s .55s;padding:16px 16px 0 30px;overflow:hidden;backface-visibility:hidden;box-shadow:inset 16px 0 18px -12px rgba(0,0,0,.3),inset 0 0 0 1px var(--borda)}
+.folha::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-radial-gradient(circle at 72% 38%,transparent 0 7px,var(--guil) 7px 8px),repeating-radial-gradient(circle at 18% 82%,transparent 0 9px,var(--guil) 9px 10px)}
+.folha.virada{transform:rotateY(-112deg);opacity:0;pointer-events:none}
+.folha header{position:relative;display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--cinza);padding-bottom:8px;border-bottom:1px solid var(--papel-linha)}
+.folha footer{position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:11px;color:var(--cinza)}
+.grade-p{position:relative;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;height:calc(100% - 66px);margin-top:8px}
+.selo-t{display:flex;align-items:center;justify-content:center}
+.selo-t svg{width:136px;height:136px;opacity:.92}
+.selo-t text{font-size:9.5px;font-weight:700;letter-spacing:1.6px;fill:currentColor}
+.vaga{margin:12px 6px;border:1.5px dashed var(--cinza);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;padding:8px;color:var(--cinza)}
+.vaga svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.vaga b{font-size:13px;color:var(--grafite)}.vaga span{font-size:11px}
+.idp{position:relative;display:flex;gap:14px;margin-top:16px}
+.foto{width:96px;height:124px;border-radius:8px;background:linear-gradient(145deg,#2D8A80,#0A4F4B);color:#fff;font-size:38px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none}
+.idp dl{font-size:15px}.idp dt{font-size:11px;color:var(--cinza);margin-top:8px}.idp dt:first-child{margin-top:0}.idp dd{font-weight:600;letter-spacing:-.2px}
+.mrz{position:absolute;left:30px;right:12px;bottom:46px;font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--cinza);letter-spacing:1px;word-break:break-all}
+.capa{display:none;position:absolute;inset:0;z-index:5;border:0;border-radius:6px 16px 16px 6px;background:radial-gradient(circle at 30% 20%,#1E7A73,#0A3F3C 75%);transform-origin:left center;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#E6C98F;text-shadow:0 1px 0 rgba(0,0,0,.4)}
+.capa::after{content:"";position:absolute;inset:12px;border:1.5px solid rgba(230,201,143,.55);border-radius:4px 10px 10px 4px}
+.capa svg{width:92px;height:92px;stroke:#E6C98F;fill:none;stroke-width:1.5}
+.capa b{font-size:28px;font-weight:600;letter-spacing:1px}.capa span{font-size:15px;opacity:.85}.capa i{font-style:normal;font-size:12px;margin-top:18px;opacity:.7}
+.livro.fechado .capa{display:flex}.livro.fechado .miolo{visibility:hidden}.livro.fechado.abrindo .miolo{visibility:visible}
+.livro.abrindo .capa{animation:abrirCapa .8s cubic-bezier(.5,.1,.2,1) forwards}
+@keyframes abrirCapa{to{transform:rotateY(-150deg);opacity:0}}
+.pag{display:flex;align-items:center;justify-content:space-between;margin:26px 6px 0;font-size:14px;color:var(--cinza)}
+.pag button{width:44px;height:44px;border-radius:50%;background:var(--branco);box-shadow:var(--sombra);font-size:20px;color:var(--grafite);border:2px solid var(--borda)}
+.pag button:disabled{opacity:.35}.pag .capa-b{width:auto;padding:0 16px;border-radius:980px;font-size:14px;font-weight:600;color:var(--mare)}
+
+/* ---------- LISTAS (iOS) ---------- */
+.grupo{margin-top:20px;background:var(--branco);border-radius:22px;box-shadow:var(--sombra);overflow:hidden}
+.item{display:flex;align-items:center;gap:14px;padding:13px 16px;min-height:60px;border-bottom:1px solid var(--linha)}
+.item:last-child{border-bottom:0}
+.ico{width:36px;height:36px;border-radius:10px;background:var(--mare);display:flex;align-items:center;justify-content:center;flex:none}
+.ico.d{background:var(--dourado)}
+.ico.g{background:var(--grafite)}
+.ico svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.item .txt{flex:1}
+.item .txt b{display:block;font-size:16px;font-weight:600;letter-spacing:-.2px}
+.item .txt span{font-size:13px;color:var(--cinza);line-height:1.3}
+.chave{width:51px;height:31px;border-radius:16px;background:var(--chave-off);position:relative;flex:none;transition:background .2s}
+.chave::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.25);transition:transform .2s}
+.chave[aria-checked="true"]{background:var(--mare)}
+.chave[aria-checked="true"]::after{transform:translateX(20px)}
+.seg{margin-top:20px;display:flex;background:var(--seg);border-radius:12px;padding:3px}
+.seg button{flex:1;height:36px;border-radius:10px;font-size:13px;font-weight:600;color:var(--grafite)}
+.seg button.on{background:var(--branco);box-shadow:0 2px 8px rgba(0,0,0,.12)}
+
+/* ---------- PERFIL ---------- */
+.topo-perfil{margin-top:18px;background:var(--branco);border-radius:26px;padding:22px;box-shadow:var(--sombra);display:flex;align-items:center;gap:16px}
+.avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(145deg,#2D8A80,#0A4F4B);color:#fff;font-size:28px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none}
+.topo-perfil h2{font-size:22px;font-weight:700;letter-spacing:-.4px}
+.topo-perfil p{font-size:14px;color:var(--cinza);margin-top:2px}
+.editar{margin-top:8px;font-size:15px;font-weight:600;color:var(--mare)}
+.form{display:none;margin-top:12px;background:var(--branco);border-radius:22px;box-shadow:var(--sombra);padding:6px 16px 16px}
+.form.aberto{display:block}
+.campo{padding:10px 0;border-bottom:1px solid var(--linha)}
+.campo label{display:block;font-size:12px;color:var(--cinza);margin-bottom:2px}
+.campo input{width:100%;border:0;background:none;font:inherit;font-size:17px;padding:2px 0;color:var(--grafite)}
+.form .btn{margin-top:14px;height:46px}
+.conq{margin-top:16px;font-size:20px;font-weight:700;letter-spacing:-.4px}
+.conq-lista{margin-top:10px}
+
+/* ---------- Temas ---------- */
+svg [fill="#E8EEEC"]{fill:var(--m-bg)}svg [fill="#CFE0E6"]{fill:var(--m-agua)}svg [fill="#D5E6D8"]{fill:var(--m-parque)}
+svg g[fill="#F7F7F5"]{fill:var(--m-quadra);stroke:var(--m-qb);stroke-width:1.5}svg g[stroke="#FFFFFF"]{stroke:var(--m-rua)}
+svg [stroke="#0F6B66"]{stroke:var(--mare)}svg [fill="#0F6B66"]{fill:var(--mare)}svg [stroke="#B8925A"]{stroke:var(--dourado)}
+svg [stroke="#fff"]{stroke:var(--branco)}svg circle[fill="#fff"]{fill:var(--branco)}
+.grupo,.carimbo,.busca,.cartao-lugar,.topo-perfil,.form,.abas,.chip,.legenda{border:2px solid var(--borda)}
+.seg button.on{outline:2px solid var(--borda)}
+.controle .temas{display:flex;background:var(--seg);border-radius:980px;padding:3px}
+.controle .temas button{background:none;color:var(--grafite);padding:7px 14px;font-size:13px}
+.controle .temas button.on{background:var(--branco);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+/* ---------- Modos de acessibilidade aplicados ao app ---------- */
+body.texto-grande .titulo{font-size:38px}
+body.texto-grande .item .txt b{font-size:18px}
+body.texto-grande .item .txt span,body.texto-grande .sub{font-size:15px}
+body.sem-movimento *{transition:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ---------- v3: mapa real, folhas, formulários ---------- */
+#lmap{z-index:0;isolation:isolate}.leaflet-container{font-family:var(--fonte);background:var(--m-bg)}
+body[data-tema="escuro"] .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.85)}
+body[data-tema="contraste"] .leaflet-tile-pane{filter:contrast(1.3) grayscale(.4)}
+.pin{display:block;width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid var(--branco);background:var(--mare);box-shadow:0 3px 8px rgba(0,0,0,.35)}
+.pin.c{background:var(--dourado)}.pin.d{background:#8E8E93}.pin.sel{width:28px;height:28px}
+.obs{width:22px;height:22px;border-radius:6px;background:#C0392B;color:#fff;font:700 14px/22px var(--fonte);text-align:center;border:2px solid #fff}
+.eu{width:16px;height:16px;border-radius:50%;background:#007AFF;border:3px solid #fff;box-shadow:0 0 0 8px rgba(0,122,255,.25)}
+.filtros{overflow-x:auto;z-index:3;padding-bottom:4px}.chip{flex:none;border:2px solid var(--borda)}
+.busca,.legenda,.fabs{z-index:3}.res{position:absolute;top:66px;left:16px;right:16px;z-index:9;max-height:230px;overflow:auto;background:var(--branco);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);border:2px solid var(--borda)}
+.res[hidden]{display:none}.res button{display:block;width:100%;text-align:left;padding:12px 16px;border-bottom:1px solid var(--linha);font-size:15px}.res small{display:block;color:var(--cinza);font-size:12px}
+.fabs{position:absolute;right:16px;top:206px;display:flex;flex-direction:column;gap:8px}.fab{width:44px;height:44px;border-radius:50%;background:var(--vidro);box-shadow:0 3px 12px rgba(0,0,0,.18);font-size:20px;border:2px solid var(--borda)}
+.cartao-lugar{z-index:4}.cartao-lugar .l{display:flex;gap:8px}.cartao-lugar .l .btn{height:44px;font-size:15px}
+.sheet{position:absolute;inset:0;z-index:20;background:var(--porcelana);overflow-y:auto;padding:16px 20px 110px}.sheet[hidden]{display:none}
+.sheet h2{font-size:26px;letter-spacing:-.5px;margin-top:6px}.sheet .fechar{font-size:16px;font-weight:600;color:var(--mare)}
+.fotos{display:flex;gap:8px;margin:14px 0}.foto-i{flex:1;height:84px;border-radius:14px;background:linear-gradient(145deg,var(--mare-suave),var(--dourado-suave));display:flex;align-items:flex-end;padding:6px 8px;font-size:10px;color:var(--cinza)}
+.bd{font-size:11px;font-weight:700;padding:4px 8px;border-radius:980px;flex:none}.bd.v{background:var(--mare-suave);color:var(--mare)}.bd.c{background:var(--dourado-suave);color:var(--dourado)}.bd.d{background:var(--seg);color:var(--cinza)}
+.aviso{font-size:12px;color:var(--cinza);background:var(--dourado-suave);border-radius:12px;padding:10px 12px;margin:12px 0;line-height:1.35}
+.nota{font-size:12px;color:var(--cinza);margin:8px 4px 0}.voltar{font-size:16px;font-weight:600;color:var(--mare);margin-top:4px}
+.alt{display:block;width:100%;text-align:left;margin-top:10px;background:var(--branco);border-radius:18px;padding:14px 16px;box-shadow:var(--sombra);border:2px solid var(--borda)}.alt.on{border-color:var(--mare)}.alt b{font-size:16px}.alt span{display:block;font-size:13px;color:var(--cinza);margin-top:2px}
+.sheet select,.form-c select,.form-c textarea{width:100%;font:inherit;font-size:16px;padding:8px;border-radius:10px;border:1px solid var(--linha);background:var(--branco);color:var(--grafite)}
+.form-c .campo input[type=file]{font-size:13px}.campo[hidden]{display:none}
+.barra-p{height:8px;border-radius:4px;background:var(--seg);margin:12px 6px 0;overflow:hidden}.barra-p i{display:block;height:100%;width:0;background:var(--dourado);transition:width .6s}
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.mini div{background:var(--branco);border-radius:18px;padding:14px;box-shadow:var(--sombra);border:2px solid var(--borda)}.mini b{display:block;font-size:26px;letter-spacing:-.6px}.mini span{font-size:12px;color:var(--cinza)}
+.sm{font-size:13px;font-weight:600;color:var(--mare);padding:6px 0}.vazio{padding:18px;text-align:center;font-size:14px;color:var(--cinza)}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--ctl);color:var(--ctl-t);padding:12px 20px;border-radius:980px;font-size:14px;font-weight:600;z-index:99;max-width:90vw;opacity:0;pointer-events:none;transition:opacity .25s}.toast.on{opacity:1}
+.onb{display:flex;flex-direction:column;padding-top:40px}.onb h1{font-size:32px;letter-spacing:-.8px;line-height:1.1}.onb p{font-size:17px;color:var(--cinza);margin-top:12px;line-height:1.4}.onb .pts{display:flex;gap:6px;margin:auto 0 18px}.onb .pts i{flex:1;height:4px;border-radius:2px;background:var(--seg)}.onb .pts i.on{background:var(--mare)}.onb .btn+.btn{margin-top:10px}
+textarea{resize:none}
+
+/* ---------- v4: modo aplicativo, estados, fotos ---------- */
+.grade-p>*{min-width:0}.selo-t svg{width:100%;max-width:136px;height:auto;aspect-ratio:1}
+.bd.x{background:var(--seg);color:var(--grafite);border:1px dashed var(--cinza)}.pin.x{background:#6F8FA3}
+img.foto-i{object-fit:cover;width:100%;min-width:0;padding:0}#cPrev{width:100%;max-height:160px;object-fit:cover;border-radius:12px;margin-top:8px}
+.controle{flex-wrap:wrap;justify-content:center}
+body.app{padding:0;gap:0;background:var(--porcelana)}
+body.app .palco{gap:0;width:100%}
+body.app .phone{width:100%;max-width:none;height:100vh;height:100dvh;border-radius:0;box-shadow:none}
+body.app .ilha,body.app .status{display:none}
+body.app .conteudo{top:0}
+body.app .mapa-fundo{inset:0}
+body.app .tela{padding-top:calc(14px + env(safe-area-inset-top,0px));padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+body.app .tela.mapa{padding:0}
+body.app .busca{top:calc(10px + env(safe-area-inset-top,0px))}
+body.app .filtros{top:calc(72px + env(safe-area-inset-top,0px))}
+body.app .legenda{top:calc(124px + env(safe-area-inset-top,0px))}
+body.app .fabs{top:calc(206px + env(safe-area-inset-top,0px))}
+body.app .res{top:calc(66px + env(safe-area-inset-top,0px))}
+body.app .abas{left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+body.app .cartao-lugar{left:12px;right:12px;bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+body.app .sheet{padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+body.app .controle{position:fixed;top:8px;right:8px;z-index:200}
+body.app .controle .temas,body.app #dica,body.app #alternar{display:none}
+@media(max-width:520px){body.app .controle{display:none}}
+/* ---------- versão somente aplicativo ---------- */
+.controle{display:none!important}
+@media(min-width:521px){body.app .phone{max-width:480px;margin:0 auto}body.app{background:var(--pagina)}}
+</style>
+</head>
+<body data-tema="claro" class="app">
+
+<div class="controle">
+  <button id="alternar" type="button">Ver todas as telas</button>
+  <button type="button" id="modoApp">Modo aplicativo</button>
+  <div class="temas" role="group" aria-label="Tema"><button type="button" class="on" data-tema="claro">Claro</button><button type="button" data-tema="escuro">Escuro</button><button type="button" data-tema="contraste">Alto contraste</button></div>
+  <span id="dica">Toque nas abas para navegar pelo protótipo</span>
+</div>
+
+<main class="palco" id="palco">
+
+  <!-- 1. MAPA -->
+  <section class="phone ativo" data-tela="mapa" aria-label="Tela do mapa acessível">
+    <div class="ilha"></div>
+    <div class="status"><span>9:41</span><i>5G 100%</i></div>
+    <div class="conteudo">
+      <div class="tela mapa">
+        <div class="mapa-fundo">
+          <svg viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="390" height="844" fill="#E8EEEC"/>
+            <!-- rio -->
+            <path d="M-20 300 C 90 260, 130 380, 230 350 S 360 250, 420 300 L 420 410 C 360 360, 290 450, 220 460 S 80 470, -20 410 Z" fill="#CFE0E6"/>
+            <!-- parques -->
+            <rect x="26" y="130" width="96" height="70" rx="18" fill="#D5E6D8"/>
+            <rect x="270" y="520" width="100" height="84" rx="18" fill="#D5E6D8"/>
+            <!-- quadras -->
+            <g fill="#F7F7F5">
+              <rect x="140" y="120" width="70" height="60" rx="8"/><rect x="224" y="120" width="140" height="60" rx="8"/>
+              <rect x="26" y="220" width="70" height="52" rx="8"/><rect x="110" y="205" width="90" height="50" rx="8"/>
+              <rect x="30" y="500" width="110" height="70" rx="8"/><rect x="156" y="500" width="100" height="70" rx="8"/>
+              <rect x="30" y="590" width="150" height="70" rx="8"/><rect x="196" y="620" width="70" height="40" rx="8"/>
+            </g>
+            <!-- ruas -->
+            <g stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" fill="none">
+              <path d="M0 200 L390 215"/><path d="M0 485 L390 470"/><path d="M130 90 L150 700"/><path d="M262 90 L250 700"/>
+            </g>
+            <!-- trechos acessíveis -->
+            <path d="M-10 200 L130 204 L140 485 L252 480" stroke="#0F6B66" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <path d="M252 480 L258 600" stroke="#B8925A" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 10" fill="none"/>
+            <!-- pins -->
+            <g>
+              <circle cx="140" cy="485" r="26" fill="#0F6B66" opacity=".14"/>
+              <circle cx="140" cy="485" r="12" fill="#0F6B66" stroke="#fff" stroke-width="4"/>
+              <circle cx="262" cy="250" r="9" fill="#fff" stroke="#0F6B66" stroke-width="4"/>
+              <circle cx="70" cy="560" r="9" fill="#fff" stroke="#0F6B66" stroke-width="4"/>
+              <circle cx="258" cy="600" r="9" fill="#fff" stroke="#B8925A" stroke-width="4"/>
+              <circle cx="96" cy="204" r="7" fill="#007AFF" stroke="#fff" stroke-width="3"/>
+            </g>
+          </svg>
+        </div>
+        <div id="lmap" class="mapa-fundo" role="application" aria-label="Mapa interativo de lugares acessíveis"></div>
+        <label class="busca">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <input type="search" id="q" autocomplete="off" placeholder="Buscar lugares acessíveis" aria-label="Buscar lugares acessíveis">
+        </label>
+        <div class="res" id="res" hidden></div>
+        <div class="filtros" role="group" aria-label="Filtros do mapa">
+          <button class="chip" type="button" data-f="acess" aria-pressed="true">Trechos acessíveis</button>
+          <button class="chip" type="button" data-f="ress" aria-pressed="true">Com ressalvas</button>
+          <button class="chip" type="button" data-f="obst" aria-pressed="true">Obstáculos</button>
+          <button class="chip" type="button" data-f="rampa" aria-pressed="false">Rampas</button>
+          <button class="chip" type="button" data-f="tatil" aria-pressed="false">Piso tátil</button>
+        </div>
+        <div class="fabs"><button type="button" class="fab" id="btnLoc" aria-label="Minha localização">&#9678;</button><button type="button" class="fab" data-a="ir" data-v="acessibilidade" aria-label="Acessibilidade">&#9855;</button></div>
+        <div class="legenda">
+          <div><b></b>Acessível (exemplo)</div>
+          <div><b class="alerta"></b>Com ressalvas (exemplo)</div><div style="font-size:11px;color:var(--cinza)">Dados fictícios</div>
+        </div>
+        <div class="cartao-lugar" id="cartao" aria-live="polite"></div>
+        <div class="sheet" id="det" role="dialog" aria-modal="true" aria-label="Detalhes do local" hidden></div>
+        <div class="sheet" id="rota" role="dialog" aria-modal="true" aria-label="Rotas acessíveis" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. CARIMBOS -->
+  <section class="phone" data-tela="carimbos" aria-label="Tela de carimbos">
+    <div class="ilha"></div>
+    <div class="status"><span>9:41</span><i>5G 100%</i></div>
+    <div class="conteudo">
+      <div class="tela">
+        <h1 class="titulo">Carimbos</h1>
+        <p class="sub">Seu passaporte acessível, 4 de 8 carimbos</p>
+        <div class="barra-p" role="progressbar" aria-label="Progresso do passaporte" id="pbar" aria-valuemin="0" aria-valuemax="8"><i id="pbarI"></i></div>
+        <div class="livro" id="livro"></div>
+        <div class="pag">
+          <button type="button" id="ant" aria-label="Página anterior">&#8249;</button>
+          <button type="button" class="capa-b" id="verCapa">Ver capa</button>
+          <span id="pgtxt">Página 1 de 2</span>
+          <button type="button" id="prox" aria-label="Próxima página">&#8250;</button>
+        </div>
+        <div id="carimbosExtra"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. CONTRIBUIR -->
+  <section class="phone" data-tela="contribuir" aria-label="Tela de contribuir">
+    <div class="ilha"></div>
+    <div class="status"><span>9:41</span><i>5G 100%</i></div>
+    <div class="conteudo"><div class="tela">
+      <h1 class="titulo">Contribuir</h1>
+      <p class="sub">Ajude outras pessoas a se locomover. Cada envio passa por análise.</p>
+      <div class="grupo form-c">
+        <div class="campo"><label for="cTipo">O que você quer fazer</label><select id="cTipo"></select></div>
+        <div class="campo"><label for="cLugar">Local</label><select id="cLugar"></select></div>
+        <div class="campo" id="cNomeW" hidden><label for="cNome">Nome do novo estabelecimento</label><input id="cNome" placeholder="Ex.: Café da Esquina"></div>
+        <div class="campo"><label for="cTexto">Comentário</label><textarea id="cTexto" rows="3" placeholder="Descreva o que você viu"></textarea></div>
+        <div class="campo"><label for="cFoto">Fotografia (opcional)</label><input id="cFoto" type="file" accept="image/*"><img id="cPrev" alt="Pré-visualização da fotografia" hidden><p class="nota">A foto é reduzida e fica salva só neste aparelho. Este protótipo não envia nada a servidores.</p></div>
+        <div style="padding:12px 16px"><button class="btn" type="button" id="cEnviar">Enviar contribuição</button></div>
+      </div>
+      <h3 class="conq">Suas contribuições</h3>
+      <div id="cLista"></div>
+    </div></div>
+  </section>
+
+  <!-- 3b. ACESSIBILIDADE -->
+  <section class="phone" data-tela="acessibilidade" aria-label="Tela de acessibilidade">
+    <div class="ilha"></div>
+    <div class="status"><span>9:41</span><i>5G 100%</i></div>
+    <div class="conteudo">
+      <div class="tela">
+        <button class="voltar" type="button" data-a="ir" data-v="perfil">&#8249; Perfil</button>
+        <h1 class="titulo">Acessibilidade</h1>
+        <p class="sub">Ajuste o RECMAP do seu jeito</p>
+        <div class="seg" role="group" aria-label="Aparência" id="segTema"><button type="button" class="on" data-tema="claro">Claro</button><button type="button" data-tema="escuro">Escuro</button><button type="button" data-tema="contraste">Alto contraste</button></div>
+        <div class="grupo" id="perfis" role="group" aria-label="Perfis de acessibilidade"></div>
+        <p class="nota">Ao ligar um perfil, o RECMAP ajusta filtros do mapa e rotas. Você ainda pode mudar cada opção.</p>
+        <div class="seg" role="group" aria-label="Ritmo de caminhada" id="segRitmo"><button type="button" data-v="t">Tranquilo</button><button type="button" data-v="n" class="on">Normal</button><button type="button" data-v="r">Rápido</button></div>
+        <div class="seg" style="margin-top:10px" role="group" aria-label="Preferência de rota" id="segPref"><button type="button" data-v="ac" class="on">Mais acessível</button><button type="button" data-v="eq">Equilibrada</button><button type="button" data-v="ct">Mais curta</button></div>
+        <div class="grupo">
+          <div class="item"><div class="ico g"><svg viewBox="0 0 24 24"><path d="M4 19l5-14 5 14M6 14h6M16 19l3-8 3 8"/></svg></div><div class="txt"><b>Texto maior</b><span>Aumenta letras e botões</span></div><button class="chave" role="switch" aria-checked="false" aria-label="Texto maior" data-modo="texto-grande" type="button"></button></div>
+          <div class="item"><div class="ico g"><svg viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6l-5 4zM16 9a4 4 0 0 1 0 6"/></svg></div><div class="txt"><b>Leitor de tela</b><span>Descreve os lugares em voz alta</span></div><button class="chave" role="switch" aria-checked="false" aria-label="Leitor de tela" data-pref="leitor" type="button"></button></div>
+          <div class="item"><div class="ico g"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></div><div class="txt"><b>Reduzir movimento</b><span>Menos animações no app</span></div><button class="chave" role="switch" aria-checked="false" aria-label="Reduzir movimento" data-modo="sem-movimento" type="button"></button></div>
+        </div>
+        <div class="grupo">
+          <div class="item"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 18h6v-5h6V8h6"/></svg></div><div class="txt"><b>Evitar escadas e degraus</b><span>Rotas só com rampas e elevadores</span></div><button class="chave" role="switch" aria-checked="false" aria-label="Evitar escadas e degraus" data-pref="degraus" type="button"></button></div>
+          <div class="item"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 19L21 7M3 19h18"/></svg></div><div class="txt"><b>Evitar terrenos inclinados</b><span>Prefere trechos planos</span></div><button class="chave" role="switch" aria-checked="false" aria-label="Evitar terrenos inclinados" data-pref="incl" type="button"></button></div>
+          <div class="item"><div class="ico"><svg viewBox="0 0 24 24"><path d="M8 3h8v18H8zM5 8v8M19 8v8"/></svg></div><div class="txt"><b>Avisos por vibração e visuais</b><span>Alertas de obstáculos sem som</span></div><button class="chave" role="switch" aria-checked="false" aria-label="Avisos por vibração e visuais" data-pref="vibra" type="button"></button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. PERFIL -->
+  <section class="phone" data-tela="perfil" aria-label="Tela de perfil">
+    <div class="ilha"></div>
+    <div class="status"><span>9:41</span><i>5G 100%</i></div>
+    <div class="conteudo">
+      <div class="tela">
+        <h1 class="titulo">Perfil</h1>
+        <div class="topo-perfil">
+          <div class="avatar" id="avatar">A</div>
+          <div>
+            <h2 id="nomeExibido">Ana Souza</h2>
+            <p id="cidadeExibida">Recife, Pernambuco</p>
+            <button class="editar" id="btnEditar" type="button">Editar informações</button>
+          </div>
+        </div>
+        <div class="form" id="form">
+          <div class="campo"><label for="inNome">Nome</label><input id="inNome" value="Ana Souza"></div>
+          <div class="campo"><label for="inCidade">Cidade</label><input id="inCidade" value="Recife, Pernambuco"></div>
+          <button class="btn" id="btnSalvar" type="button">Salvar alterações</button>
+        </div>
+        <div id="perfilExtra"></div></div></div>
+  </section>
+
+  <section class="phone" data-tela="onboarding" aria-label="Apresentação inicial">
+    <div class="ilha"></div>
+    <div class="status"><span>9:41</span><i>5G 100%</i></div>
+    <div class="conteudo"><div class="tela onb" id="onb"></div></div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  var telas = [
+    {id:'mapa', nome:'Mapa', svg:'<path d="M9 4L3 6.500v13L9 17l6 3 6-2.500v-13L15 7zM9 4v13M15 7v13"/>'},
+    {id:'carimbos', nome:'Carimbos', svg:'<rect x="4" y="3" width="16" height="18" rx="3"/><circle cx="12" cy="11" r="3.500"/><path d="M8 17h8"/>'},
+    {id:'contribuir', nome:'Contribuir', svg:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'},
+    {id:'perfil', nome:'Perfil', svg:'<circle cx="12" cy="8" r="4"/><path d="M4 20c1.500-4 4.500-6 8-6s6.500 2 8 6"/>'}
+  ];
+  var phones = Array.prototype.slice.call(document.querySelectorAll('.phone'));
+
+  function ir(id){
+    phones.forEach(function(p){ p.classList.toggle('ativo', p.dataset.tela === id); });
+  }
+
+  window.irTela = ir;
+  // injeta a barra de abas em cada tela
+  phones.forEach(function(p){
+    if(p.dataset.tela==='onboarding') return;
+    var nav = document.createElement('nav');
+    nav.className = 'abas';
+    nav.setAttribute('aria-label','Navegação principal');
+    telas.forEach(function(t){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'aba' + (t.id === (p.dataset.tela==='acessibilidade'?'perfil':p.dataset.tela) ? ' on' : '');
+      b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + t.svg + '</svg><span>' + t.nome + '</span>';
+      b.addEventListener('click', function(){ window.irTela(t.id); });
+      nav.appendChild(b);
+    });
+    p.appendChild(nav);
+  });
+
+  // modo quadro (todas as telas lado a lado, ideal para importar no Figma)
+  var btn = document.getElementById('alternar');
+  var dica = document.getElementById('dica');
+  btn.addEventListener('click', function(){
+    var q = document.body.classList.toggle('quadro');
+    btn.textContent = q ? 'Voltar ao protótipo' : 'Ver todas as telas';
+    dica.textContent = q ? 'Quadro com as 4 telas, pronto para importar no Figma' : 'Toque nas abas para navegar pelo protótipo';
+  });
+
+  // chaves de acessibilidade
+  document.querySelectorAll('.chave').forEach(function(c){
+    c.addEventListener('click', function(){
+      var on = c.getAttribute('aria-checked') !== 'true';
+      c.setAttribute('aria-checked', on);
+      if(c.dataset.modo){ document.body.classList.toggle(c.dataset.modo, on); }
+    });
+  });
+
+  // segmentos
+  document.querySelectorAll('.seg').forEach(function(s){
+    s.querySelectorAll('button').forEach(function(b){
+      b.addEventListener('click', function(){
+        s.querySelectorAll('button').forEach(function(x){ x.classList.remove('on'); });
+        b.classList.add('on');
+      });
+    });
+  });
+
+  // chips de filtro
+  document.querySelectorAll('.chip').forEach(function(c){
+    c.addEventListener('click', function(){ c.classList.toggle('on'); });
+  });
+
+  // perfil editável
+  var form = document.getElementById('form');
+  document.getElementById('btnEditar').addEventListener('click', function(){ form.classList.toggle('aberto'); });
+  document.getElementById('btnSalvar').addEventListener('click', function(){
+    var nome = document.getElementById('inNome').value.trim() || 'Ana Souza';
+    document.getElementById('nomeExibido').textContent = nome;
+    document.getElementById('avatar').textContent = nome.charAt(0).toUpperCase();
+    form.classList.remove('aberto');
+  });
+  // ---- temas ----
+  var botoesTema = document.querySelectorAll('button[data-tema]');
+  botoesTema.forEach(function(b){
+    b.addEventListener('click', function(){
+      document.body.setAttribute('data-tema', b.dataset.tema);
+      botoesTema.forEach(function(x){ x.classList.toggle('on', x.dataset.tema === b.dataset.tema); });
+    });
+  });
+
+  // ---- livro de carimbos ----
+  var selos = window.__selos = [
+    {n:'Marco Zero', d:'12.10.2026', r:-7}, {n:'Paço do Frevo', d:'14.10.2026', r:5},
+    {n:'Boa Viagem', d:'02.11.2026', r:4}, {n:'Rua do Bom Jesus', d:'09.11.2026', r:-5},
+    {n:'Instituto Brennand', b:1}, {n:'Parque das Esculturas', b:1},
+    {n:'Sítio Histórico de Olinda', b:1}, {n:'Casa da Cultura', b:1}
+  ];
+  function selo(s,i){
+    if(s.b) return '<div class="vaga"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><b>'+s.n+'</b><span>Visite para carimbar</span></div>';
+    var c = i%2 ? 'var(--tinta2)' : 'var(--tinta1)';
+    return '<div class="selo-t" style="color:'+c+';transform:rotate('+s.r+'deg)"><svg viewBox="0 0 140 140" aria-label="Carimbo '+s.n+'"><defs><path id="t'+i+'" d="M24 70a46 46 0 0 1 92 0"/><path id="b'+i+'" d="M16 70a54 54 0 0 0 108 0"/></defs><circle cx="70" cy="70" r="65" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="70" cy="70" r="61" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="70" cy="70" r="38" fill="none" stroke="currentColor" stroke-width="1.5"/><text><textPath href="#t'+i+'" startOffset="50%" text-anchor="middle">'+s.n.toUpperCase()+'</textPath></text><text><textPath href="#b'+i+'" startOffset="50%" text-anchor="middle">RECIFE '+s.d+'</textPath></text><path d="M70 52c-8 0-14 6-14 14 0 10 14 24 14 24s14-14 14-24c0-8-6-14-14-14z" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="70" cy="66" r="5" fill="currentColor"/></svg></div>';
+  }
+  function pagina(inner, num, z){
+    return '<article class="folha" style="z-index:'+z+'"><header><span>Passaporte Acessível</span><span>RECMAP</span></header>'+inner+'<footer>'+num+'</footer></article>';
+  }
+  var idHtml = '<div class="idp"><div class="foto" id="passFoto">A</div><dl><dt>Nome</dt><dd id="passNome">Ana Souza</dd><dt>Cidade</dt><dd id="passCidade">Recife, Pernambuco</dd><dt>Emitido em</dt><dd>12 out 2026</dd><dt>Passaporte nº</dt><dd>RM 000417</dd></dl></div><div class="mrz">P&lt;BRA&lt;&lt;SOUZA&lt;&lt;ANA&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>RM000417&lt;7BRA2610129&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;02</div>';
+  function grade(a){ return '<div class="grade-p">'+selos.slice(a,a+4).map(function(s,k){return selo(s,a+k);}).join('')+'</div>'; }
+  var livro = document.getElementById('livro');
+  livro.innerHTML = '<div class="miolo">'+pagina(idHtml,'Identificação',3)+pagina(grade(0),'1',2)+pagina(grade(4),'2',1)+'</div>'
+    + '<button type="button" class="capa" id="capa" aria-label="Abrir passaporte"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/><ellipse cx="50" cy="50" rx="18" ry="40"/><path d="M10 50h80M16 30h68M16 70h68"/></svg><b>Passaporte</b><span>Acessível</span><i>RECMAP, toque para abrir</i></button>';
+  var folhas = livro.querySelectorAll('.folha'), atual = 1;
+  var pgtxt = document.getElementById('pgtxt'), ant = document.getElementById('ant'), prox = document.getElementById('prox');
+  function mostrar(){
+    folhas.forEach(function(f,i){ f.classList.toggle('virada', i < atual); });
+    pgtxt.textContent = atual === 0 ? 'Identificação' : 'Página '+atual+' de 2';
+    ant.disabled = atual === 0; prox.disabled = atual === folhas.length-1;
+  }
+  ant.addEventListener('click', function(){ if(atual>0){ atual--; mostrar(); } });
+  prox.addEventListener('click', function(){ if(atual<folhas.length-1){ atual++; mostrar(); } });
+  var x0 = null;
+  livro.addEventListener('pointerdown', function(e){ x0 = e.clientX; });
+  livro.addEventListener('pointerup', function(e){
+    if(x0 === null) return; var d = e.clientX - x0; x0 = null;
+    if(d < -40) prox.click(); else if(d > 40) ant.click();
+  });
+  document.getElementById('capa').addEventListener('click', function(){
+    livro.classList.add('abrindo');
+    setTimeout(function(){ livro.classList.remove('fechado','abrindo'); }, 800);
+  });
+  document.getElementById('verCapa').addEventListener('click', function(){ livro.classList.add('fechado'); });
+  mostrar();
+  window.rebuildLivro = function(){ livro.querySelector('.miolo').innerHTML = pagina(idHtml,'Identificação',3)+pagina(grade(0),'1',2)+pagina(grade(4),'2',1); folhas = livro.querySelectorAll('.folha'); mostrar(); if(window.aplicarNome) window.aplicarNome(); };
+
+  // nome do perfil também aparece no passaporte
+  document.getElementById('btnSalvar').addEventListener('click', function(){
+    var n = document.getElementById('nomeExibido').textContent;
+    document.getElementById('passNome').textContent = n;
+    document.getElementById('passFoto').textContent = n.charAt(0).toUpperCase();
+  });
+})();
+</script>
+<script>
+(function(){
+var K='recmap_v3',$=function(i){return document.getElementById(i)},esc=function(t){return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+var D={tema:'claro',onb:0,perfis:['cadeira'],f:{acess:1,ress:1,obst:1,rampa:0,tatil:0},sw:{},pref:'ac',ritmo:'n',nome:'Ana Souza',cidade:'Recife, Pernambuco',visitas:{mz:'2026-10-12',pf:'2026-10-14',bv:'2026-11-02',bj:'2026-11-09'},contribs:[],novos:[],obs:[],com:{},rota:0};
+var S;try{S=Object.assign({},D,JSON.parse(localStorage.getItem(K)||'{}'))}catch(e){S=Object.assign({},D)}
+function save(){try{localStorage.setItem(K,JSON.stringify(S,function(k,v){return k==='pos'?undefined:v}));return 1}catch(e){return 0}}
+var KF='recmap_fotos',FT={};try{FT=JSON.parse(localStorage.getItem(KF)||'{}')}catch(e){}
+function reduzir(f,cb){var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var k=Math.min(1,720/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',.7))};im.onerror=function(){cb(null)};im.src=r.result};r.onerror=function(){cb(null)};r.readAsDataURL(f)}
+function fotosHtml(p){var f=S.contribs.filter(function(c){return c.p===p.id&&FT[c.id]}).slice(-3);return f.length?'<div class="fotos">'+f.map(function(c){return '<img class="foto-i" alt="Foto enviada por você" src="'+FT[c.id]+'">'}).join('')+'</div><p class="nota">Fotos da comunidade, salvas só neste aparelho e não verificadas.</p>':'<div class="fotos" role="img" aria-label="Sem fotografias ainda"><div class="foto-i">Sem fotos ainda</div></div>'}
+var tt;function toast(m){if(S.sw&&S.sw.vibra==='true'&&navigator.vibrate)navigator.vibrate(120);var t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('on')},2800)}
+// ---- dados FICTÍCIOS de demonstração (Recife e Olinda) ----
+function mk(id,n,la,lo,e,t,c,r,ti,b,el,po,ca,av,dt,cm){return {seed:1,id:id,n:n,a:[la,lo],e:e,t:t,c:c,f:{rampa:r,tatil:ti,banheiro:b,elevador:el},porta:po,calc:ca,av:av,dt:dt,cm:cm}}
+var P=[mk('mz','Marco Zero',-8.0631,-34.8711,'Praça Rio Branco, Bairro do Recife','Praça','antigo','sx','sx','sx','dd',null,'regular x',4.2,'2026-10-12',[['Visitante','Rampas boas, calçada irregular perto do rio.']]),
+mk('pf','Paço do Frevo',-8.0636,-34.8714,'Praça do Arsenal, Bairro do Recife','Museu','antigo','sx','nx','sx','sx',90,'boa x',4.6,'2026-10-14',[['Visitante','Elevador amplo e equipe atenciosa.']]),
+mk('bv','Praia de Boa Viagem',-8.118,-34.893,'Av. Boa Viagem, Recife','Praia','praias','sx','dd','nx','dd',null,'boa x',4.0,'2026-11-02',[]),
+mk('bj','Rua do Bom Jesus',-8.0627,-34.8704,'Rua do Bom Jesus, Recife Antigo','Rua histórica','antigo','nx','nx','dd','dd',null,'ruim x',3.1,'2026-11-09',[['Visitante','Paralelepípedo difícil para cadeira de rodas.']]),
+mk('ib','Instituto Brennand',-8.0613,-34.9499,'Várzea, Recife','Museu','cultura','sx','sx','sx','sx',100,'boa x',4.7,'2026-09-20',[]),
+mk('pe','Parque das Esculturas',-8.0588,-34.8689,'Recife Antigo, Recife','Parque','parques','sx','dd','dd','dd',null,'regular x',3.8,'2026-10-03',[]),
+mk('ol','Sítio Histórico de Olinda',-8.0105,-34.8551,'Centro Histórico, Olinda','Sítio histórico','olinda','nx','nx','dd','dd',null,'ruim x',2.9,'2026-08-15',[['Visitante','Ladeiras e pedras: precisa de apoio.']]),
+mk('cc','Casa da Cultura',-8.0586,-34.8754,'Rua Floriano Peixoto, Recife','Cultura','cultura','sx','dd','sx','nx',85,'regular x',3.9,'2026-09-02',[])];
+var OB=[{a:[-8.0638,-34.8707],t:'Calçada com buraco'},{a:[-8.0622,-34.8699],t:'Rampa bloqueada por barraca'},{a:[-8.1195,-34.8945],t:'Elevador da passarela fora de serviço'}];
+var SG=[{p:[[-8.0631,-34.8711],[-8.0627,-34.8704],[-8.0625,-34.8693]],ok:1},{p:[[-8.0627,-34.8704],[-8.0618,-34.8688]],ok:0}];
+var CO=[['antigo','Recife Antigo',['mz','pf','bj']],['praias','Praias',['bv']],['parques','Parques',['pe']],['cultura','Cultura e turismo',['ib','cc']],['olinda','Olinda',['ol']]];
+var PF=[['cadeira','Cadeira de rodas'],['mobred','Mobilidade reduzida'],['bengala','Bengala ou cão-guia'],['baixavisao','Baixa visão'],['auditiva','Deficiência auditiva']];
+var TP=[['ava','Avaliar local'],['cad','Cadastrar estabelecimento'],['obs','Reportar obstáculo'],['ramp','Informar rampa bloqueada'],['elev','Avisar elevador quebrado']];
+var NV={v:'Verificado',x:'Exemplo fictício',c:'Comunidade',d:'Desconhecido'},FL={rampa:'Rampas',banheiro:'Banheiro adaptado',elevador:'Elevador',tatil:'Piso tátil'},VL={s:'Sim',n:'Não',d:'Não informado'};
+function todos(){return P.concat(S.novos)}function lugar(id){return todos().filter(function(p){return p.id===id})[0]}
+function fmt(d){return d.split('-').reverse().join('/')}function hoje(){return new Date().toISOString().slice(0,10)}
+function nivel(p){var v=Object.keys(p.f).map(function(k){return p.f[k][1]});return v.indexOf('v')>-1?'v':v.indexOf('x')>-1?'x':v.indexOf('c')>-1?'c':'d'}
+function norm(t){return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+function pontos(){var n=0;S.contribs.forEach(function(c){n+=5+(c.st==='verificada'?10:0)});return n}
+// ---- perfis ----
+function efeitos(){var p=S.perfis;if(p.indexOf('cadeira')>-1||p.indexOf('mobred')>-1){S.f.rampa=1;S.sw.degraus='true';S.sw.incl='true'}if(p.indexOf('bengala')>-1||p.indexOf('baixavisao')>-1)S.f.tatil=1;if(p.indexOf('auditiva')>-1){S.sw.vibra='true';S.sw.leitor='false'}}
+function vel(){var m={cadeira:3.2,mobred:2.8,bengala:3.4,baixavisao:3.6},v=4.5;S.perfis.forEach(function(p){if(m[p])v=Math.min(v,m[p])});return v*({t:.85,n:1,r:1.15}[S.ritmo])}
+function syncUI(){document.body.setAttribute('data-tema',S.tema);document.querySelectorAll('button[data-tema]').forEach(function(b){b.classList.toggle('on',b.dataset.tema===S.tema)});
+document.querySelectorAll('.chip[data-f]').forEach(function(c){var o=!!S.f[c.dataset.f];c.classList.toggle('on',o);c.setAttribute('aria-pressed',o)});
+document.querySelectorAll('.chave').forEach(function(c){var k=c.dataset.pref||c.dataset.modo;if(k&&S.sw[k]!==undefined){c.setAttribute('aria-checked',S.sw[k]);if(c.dataset.modo)document.body.classList.toggle(c.dataset.modo,S.sw[k]==='true')}});
+document.querySelectorAll('#segRitmo button').forEach(function(b){b.classList.toggle('on',b.dataset.v===S.ritmo)});document.querySelectorAll('#segPref button').forEach(function(b){b.classList.toggle('on',b.dataset.v===S.pref)});
+$('perfis').innerHTML=PF.map(function(p){return '<div class="item"><div class="txt"><b>'+p[1]+'</b></div><button class="chave" role="switch" aria-checked="'+(S.perfis.indexOf(p[0])>-1)+'" aria-label="Perfil: '+p[1]+'" data-perfil="'+p[0]+'" type="button"></button></div>'}).join('')}
+// ---- mapa ----
+var map=null,gP,gO,gS,gR,mEu,sel=null,selId='mz';
+function passa(p){return (!S.f.rampa||p.f.rampa[0]==='s')&&(!S.f.tatil||p.f.tatil[0]==='s')}
+function ico(c,x,sel){return L.divIcon({className:'',html:'<span class="'+c+(sel?' sel':'')+'" aria-hidden="true">'+(x||'')+'</span>',iconSize:[26,26],iconAnchor:[13,26]})}
+function desenhar(){if(!map)return;gP.clearLayers();gO.clearLayers();gS.clearLayers();
+todos().filter(passa).forEach(function(p){L.marker(p.a,{icon:ico('pin '+nivel(p),'',p.id===selId),title:p.n,alt:p.n,keyboard:true}).on('click',function(){selecionar(p.id)}).addTo(gP)});
+if(S.f.obst)OB.concat(S.obs).forEach(function(o){L.marker(o.a,{icon:ico('obs','!'),title:'Obstáculo: '+o.t,alt:'Obstáculo: '+o.t}).bindPopup(esc(o.t)+(o.com?'<br><small>Contribuição da comunidade (não verificada)</small>':'<br><small>Dado fictício de demonstração</small>')).addTo(gO)});
+SG.forEach(function(s){if((s.ok&&S.f.acess)||(!s.ok&&S.f.ress))L.polyline(s.p,{color:s.ok?'#0F6B66':'#B8925A',weight:6,dashArray:s.ok?null:'2 10',lineCap:'round'}).addTo(gS)})}
+function selecionar(id,voar){selId=id;var p=lugar(id);if(!p)return;if(S.sw.leitor==='true'&&window.speechSynthesis){try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(p.n+'. '+NV[nivel(p)]+'. Rampa: '+VL[p.f.rampa[0]]);u.lang='pt-BR';speechSynthesis.speak(u)}catch(e){}}if(map&&voar)map.flyTo(p.a,16);desenhar();cartao()}
+function cartao(){var p=lugar(selId),c=$('cartao');if(!p||!passa(p)){c.innerHTML='<div class="vazio">Nenhum local com estes filtros. Desligue um filtro para ver mais lugares.</div>';return}
+c.innerHTML='<h3>'+esc(p.n)+'</h3><p>'+esc(p.e)+'</p><div class="selos"><span class="selo">Rampa: '+VL[p.f.rampa[0]]+'</span><span class="selo">Piso tátil: '+VL[p.f.tatil[0]]+'</span><span class="bd '+nivel(p)+'">'+NV[nivel(p)]+'</span></div><div class="l"><button class="btn sec" type="button" data-a="detalhe">Ver detalhes</button><button class="btn" type="button" data-a="rota">Traçar rota</button></div>'}
+function detalhe(){var p=lugar(selId),d=$('det'),cm=(p.cm||[]).map(function(c){return [c[0],c[1],'d']}).concat((S.com[p.id]||[]).map(function(c){return [c[0],c[1],'c']}));
+d.innerHTML='<button class="fechar" type="button" data-a="fechar">&#8249; Mapa</button><h2>'+esc(p.n)+'</h2><p class="sub">'+esc(p.e)+'</p>'+fotosHtml(p)+''
++'<div class="grupo"><div class="item"><div class="txt"><b>Avaliação de acessibilidade</b><span>'+p.av.toFixed(1)+' de 5, nota de demonstração</span></div><span class="bd '+nivel(p)+'">'+NV[nivel(p)]+'</span></div>'
++Object.keys(FL).map(function(k){var f=p.f[k];return '<div class="item"><div class="txt"><b>'+FL[k]+'</b><span>'+VL[f[0]]+'</span></div><span class="bd '+f[1]+'">'+NV[f[1]]+'</span></div>'}).join('')
++'<div class="item"><div class="txt"><b>Largura das portas</b><span>'+(p.porta?p.porta+' cm':'Não informada')+'</span></div><span class="bd '+(p.porta?'c':'d')+'">'+(p.porta?'Comunidade':'Desconhecido')+'</span></div>'
++'<div class="item"><div class="txt"><b>Condição das calçadas</b><span>'+({boa:'Boa',regular:'Regular',ruim:'Ruim'}[(p.calc||'').split(' ')[0]]||'Não informada')+'</span></div><span class="bd '+((p.calc||'d').split(' ')[1]||'d')+'">'+NV[(p.calc||'d').split(' ')[1]||'d']+'</span></div>'
++'<div class="item"><div class="txt"><b>Última avaliação</b><span>'+fmt(p.dt)+(p.seed?' (data de exemplo)':'')+'</span></div></div></div>'
++'<div class="aviso">Exemplo fictício: dado inventado para a demonstração, nunca verificado em campo. Comunidade: enviado por usuários deste protótipo, sem confirmação. Desconhecido: sem informação. O selo Verificado só existirá com um serviço real de análise.</div>'
++'<h3 class="conq">Comentários</h3>'+(cm.length?'<div class="grupo">'+cm.map(function(c){return '<div class="item"><div class="txt"><b>'+esc(c[0])+'</b><span>'+esc(c[1])+'</span></div><span class="bd '+c[2]+'">'+(c[2]==='c'?'Comunidade':'Exemplo')+'</span></div>'}).join('')+'</div>':'<div class="vazio">Ainda não há comentários. Seja a primeira pessoa a avaliar.</div>')
++'<div class="l" style="display:flex;gap:8px;margin-top:14px"><button class="btn sec" type="button" data-a="checkin">Fazer check-in</button><button class="btn" type="button" data-a="rota">Traçar rota</button></div><button class="sm" type="button" data-a="contribLugar">Contribuir sobre este local</button>';
+d.hidden=false;d.querySelector('.fechar').focus()}
+function dist(a,b){var r=Math.PI/180,x=Math.sin((b[0]-a[0])*r/2),y=Math.sin((b[1]-a[1])*r/2),h=x*x+Math.cos(a[0]*r)*Math.cos(b[0]*r)*y*y;return 12742*Math.asin(Math.sqrt(h))}
+function perto(o,a,b){for(var i=0;i<=8;i++){var q=[a[0]+(b[0]-a[0])*i/8,a[1]+(b[1]-a[1])*i/8];if(dist(o,q)<.2)return 1}return 0}
+var ALT=[['ac','Mais acessível',1.18,'Evita degraus, trechos inclinados e obstáculos conhecidos'],['eq','Equilibrada',1.08,'Equilíbrio entre distância e conforto'],['ct','Mais curta',1,'Menor distância, pode passar por obstáculos']];
+function painelRota(){var op=todos().map(function(p){return '<option value="'+p.id+'">'+esc(p.n)+'</option>'}),r=$('rota');
+r.innerHTML='<button class="fechar" type="button" data-a="fechar">&#8249; Mapa</button><h2>Rotas</h2><div class="grupo" style="margin-top:12px"><div class="campo" style="padding:10px 16px"><label for="rO">Origem</label><select id="rO">'+(S.pos?'<option value="eu">Minha localização</option>':'')+op.join('')+'</select></div><div class="campo" style="padding:10px 16px"><label for="rD">Destino</label><select id="rD">'+op.join('')+'</select></div></div><div class="aviso" id="rAviso"></div><div id="rRes"></div>';
+$('rD').value=selId;$('rO').value=S.pos?'eu':(selId==='mz'?'pf':'mz');$('rO').onchange=$('rD').onchange=calcRota;calcRota();r.hidden=false;r.querySelector('.fechar').focus()}
+/* Serviço real de rotas: defina window.RECMAP_CONFIG={routingUrl:'https://SEU-SERVIDOR'} antes deste script.
+   Espera uma API compatível com OSRM (/route/v1/foot/lon,lat;lon,lat). Sem routingUrl, as rotas são DEMONSTRATIVAS. */
+var CFG=Object.assign({routingUrl:''},window.RECMAP_CONFIG||{}),rl=null,rotas=[];
+function caminho(o,d,id){var m=[(o[0]+d[0])/2,(o[1]+d[1])/2],f=id==='ac'?.0007:id==='eq'?.0003:0;return [o,[m[0]+f,m[1]-f],d]}
+function demoRotas(o,d){var b=dist(o,d),a=ALT.slice();a.sort(function(x,y){return x[0]===S.pref?-1:y[0]===S.pref?1:0});return a.map(function(x){var km=b*x[2];return {id:x[0],n:x[1],km:km,min:Math.round(km/vel()*60),nota:x[3],ob:x[0]==='ct'?OB.concat(S.obs).filter(function(q){return perto(q.a,o,d)}):[],demo:1,pts:caminho(o,d,x[0])}})}
+function realRotas(o,d){return fetch(CFG.routingUrl.replace(/\/$/,'')+'/route/v1/foot/'+o[1]+','+o[0]+';'+d[1]+','+d[0]+'?overview=full&geometries=geojson&alternatives=true').then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){if(!j.routes||!j.routes.length)throw 0;return j.routes.map(function(r,i){return {id:'r'+i,n:'Opção '+(i+1),km:r.distance/1000,min:Math.round(r.duration/60),nota:'Calculada por serviço externo. Não considera rampas, degraus nem inclinação.',ob:[],demo:0,pts:r.geometry.coordinates.map(function(c){return [c[1],c[0]]})}})})}
+function cardRota(a,i){return '<button class="alt'+(i?'':' on')+'" type="button" data-a="alt" data-i="'+a.id+'" aria-pressed="'+(i===0)+'"><b>'+esc(a.n)+(i?'':' (sugerida)')+' <span class="bd '+(a.demo?'x':'d')+'" style="display:inline-block">'+(a.demo?'Demonstrativa':'Serviço externo')+'</span></b><span>'+a.km.toFixed(2)+' km, cerca de '+a.min+' min</span><span>'+esc(a.nota)+'</span>'+(a.ob.length?'<span style="color:#C0392B">Atenção: '+a.ob.length+' obstáculo(s) de exemplo perto do trajeto: '+esc(a.ob[0].t)+'</span>':'')+(a.demo&&S.sw.incl==='true'&&a.id==='ct'?'<span style="color:#C0392B">Pode ter trechos inclinados</span>':'')+'</button>'}
+function calcRota(){var oi=$('rO').value,di=$('rD').value;if(oi===di){$('rRes').innerHTML='<div class="vazio">Escolha origem e destino diferentes.</div>';return}
+var o=oi==='eu'?S.pos:lugar(oi).a,d=lugar(di).a;$('rRes').innerHTML='<div class="vazio">Calculando rotas...</div>';
+var pr=CFG.routingUrl?realRotas(o,d).catch(function(){toast('Serviço de rotas indisponível. Mostrando rotas demonstrativas.');return demoRotas(o,d)}):Promise.resolve(demoRotas(o,d));
+pr.then(function(rs){rotas=rs;$('rAviso').textContent=rs[0].demo?'Rotas demonstrativas: linha reta ajustada, sem dados reais de calçadas, rampas ou elevadores. Não use para se locomover.':'Rotas de um serviço externo de roteamento. Ele não conhece rampas, degraus nem inclinação: confirme as condições no local.';$('rRes').innerHTML=rs.map(cardRota).join('')+'<button class="btn" type="button" data-a="usarRota" style="margin-top:14px">Mostrar no mapa</button>';desenharRota(rs[0].id)})}
+function desenharRota(id){var r=rotas.filter(function(x){return x.id===id})[0];if(!map||!r)return;if(rl)map.removeLayer(rl);rl=L.polyline(r.pts,{color:'#007AFF',weight:5,opacity:.85,dashArray:r.demo?'10 8':null}).addTo(map)}
+function buscar(){var q=norm($('q').value.trim()),r=$('res');if(!q){r.hidden=true;return}
+var l=todos().filter(function(p){return norm(p.n+' '+p.e+' '+p.t).indexOf(q)>-1});
+r.innerHTML=l.length?l.map(function(p){return '<button type="button" data-a="ir-lugar" data-id="'+p.id+'">'+esc(p.n)+'<small>'+esc(p.e)+'</small></button>'}).join(''):'<div class="vazio">Nenhum local encontrado. <button class="sm" type="button" data-a="ir" data-v="contribuir">Cadastrar este local</button></div>';r.hidden=false}
+// ---- carimbos / perfil / contribuir ----
+function conquistas(){var n=Object.keys(S.visitas).length,c=S.contribs;return [['Primeira rota calculada (demonstração)',S.rota>0],['Metade do passaporte (4 carimbos)',n>=4],['Colaboradora (3 contribuições)',c.length>=3],['Contribuição aprovada (simulação)',c.some(function(x){return x.st==='verificada'})],['Coleção completa',CO.some(function(x){return x[2].every(function(i){return S.visitas[i]})})]]}
+function sincLivro(){var ids=['mz','pf','bv','bj','ib','pe','ol','cc'];window.__selos.forEach(function(s,i){var v=S.visitas[ids[i]];s.b=v?0:1;if(v){s.d=fmt(v).replace(/\//g,'.');s.r=s.r||(i%2?4:-5)}});if(window.rebuildLivro)window.rebuildLivro()}
+function render(){var n=Object.keys(S.visitas).length,pts=pontos(),conq=conquistas();
+$('pbarI').style.width=(n/8*100)+'%';$('pbar').setAttribute('aria-valuenow',n);document.querySelector('[data-tela="carimbos"] .sub').textContent='Seu passaporte acessível, '+n+' de 8 carimbos';
+var hist=Object.keys(S.visitas).sort(function(a,b){return S.visitas[b]<S.visitas[a]?-1:1}).map(function(i){var p=lugar(i);return '<div class="item"><div class="txt"><b>'+esc(p.n)+'</b><span>Visita em '+fmt(S.visitas[i])+'</span></div></div>'}).join('')||'<div class="vazio">Você ainda não visitou nenhum local. Faça check-in no mapa.</div>';
+var cq=conq.map(function(c){return '<div class="item"><div class="ico '+(c[1]?'d':'g')+'"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.4 4.1 1.2 6L12 16.6 6.6 19.4l1.2-6L3.4 9.3l6-.7z"/></svg></div><div class="txt"><b>'+c[0]+'</b><span>'+(c[1]?'Conquistada':'Em andamento')+'</span></div>'+(c[1]?'<button class="sm" type="button" data-a="share" data-t="'+esc(c[0])+'" aria-label="Compartilhar conquista '+esc(c[0])+'">Compartilhar</button>':'')+'</div>'}).join('');
+$('carimbosExtra').innerHTML='<h3 class="conq">Coleções</h3><div class="grupo">'+CO.map(function(c){var k=c[2].filter(function(i){return S.visitas[i]}).length;return '<div class="item"><div class="txt"><b>'+c[1]+'</b><span>'+k+' de '+c[2].length+' carimbos'+(k===c[2].length?', coleção completa':'')+'</span></div></div>'}).join('')+'</div><h3 class="conq">Conquistas</h3><div class="grupo">'+cq+'</div><h3 class="conq">Recompensas</h3><div class="aviso" style="background:var(--mare-suave)">Você tem <b>'+pts+' pontos</b>. Enviar uma contribuição vale 5 pontos e, quando verificada, mais 10.</div><h3 class="conq">Histórico de visitas</h3><div class="grupo">'+hist+'</div>';
+var perf=S.perfis.map(function(p){return PF.filter(function(x){return x[0]===p})[0][1]}).join(', ')||'Nenhum perfil';
+$('perfilExtra').innerHTML='<div class="mini"><div><b>'+n+'</b><span>Locais visitados</span></div><div><b>'+n+' de 8</b><span>Carimbos</span></div><div><b>'+S.contribs.length+'</b><span>Contribuições</span></div><div><b>'+pts+'</b><span>Pontos</span></div></div><h3 class="conq">Acessibilidade</h3><div class="grupo"><div class="item"><div class="txt"><b>Meus perfis</b><span>'+esc(perf)+'</span></div></div><div class="item"><div class="txt"><b>Rota preferida</b><span>'+({ac:'Mais acessível',eq:'Equilibrada',ct:'Mais curta'}[S.pref])+'</span></div></div><div class="item"><button class="btn sec" type="button" data-a="ir" data-v="acessibilidade">Ajustar acessibilidade</button></div></div><h3 class="conq">Conquistas</h3><div class="grupo">'+cq+'</div><h3 class="conq">Histórico de visitas</h3><div class="grupo">'+hist+'</div><p class="nota">As quatro primeiras visitas são exemplos fictícios.</p><h3 class="conq">Configurações do app</h3><div class="grupo"><div class="item"><div class="txt"><b>Dados neste aparelho</b><span>Preferências e contribuições ficam salvas só aqui</span></div></div><div class="item"><button class="btn sec" type="button" data-a="reset">Redefinir dados de demonstração</button></div></div>';
+var cl=S.contribs.slice().reverse().map(function(c){return '<div class="item">'+(FT[c.id]?'<img class="foto-i" style="flex:none;width:44px;height:44px;border-radius:8px" alt="Foto enviada" src="'+FT[c.id]+'">':'')+'<div class="txt"><b>'+esc(TP.filter(function(t){return t[0]===c.t})[0][1])+'</b><span>'+esc(c.l)+(c.tx?': '+esc(c.tx):'')+'</span></div><span class="bd '+(c.st==='verificada'?'x':c.st==='pendente'?'d':'c')+'">'+(c.st==='verificada'?'verificada (simulada)':c.st)+'</span>'+(c.st!=='verificada'?'<button class="sm" type="button" data-a="etapa" data-id="'+c.id+'">Simular análise</button>':'')+'</div>'}).join('');
+$('cLista').innerHTML=cl?'<div class="grupo">'+cl+'</div><p class="nota">Simular análise é só da demonstração: em produção, a equipe do RECMAP analisa cada envio.</p>':'<div class="vazio">Você ainda não enviou contribuições.</div>';
+$('nomeExibido').textContent=S.nome;$('cidadeExibida').textContent=S.cidade;$('avatar').textContent=S.nome.charAt(0).toUpperCase();$('inNome').value=S.nome;$('inCidade').value=S.cidade;
+$('cLugar').innerHTML=todos().map(function(p){return '<option value="'+p.id+'">'+esc(p.n)+'</option>'}).join('');sincLivro()}
+window.aplicarNome=function(){var a=$('passNome'),b=$('passFoto'),c=$('passCidade');if(a)a.textContent=S.nome;if(b)b.textContent=S.nome.charAt(0).toUpperCase();if(c)c.textContent=S.cidade}
+// ---- ações ----
+var A={ir:function(b){window.irTela(b.dataset.v)},fechar:function(b){b.closest('.sheet').hidden=true},detalhe:detalhe,rota:painelRota,
+'ir-lugar':function(b){$('res').hidden=true;$('q').value='';selecionar(b.dataset.id,1)},
+checkin:function(){if(S.visitas[selId]){toast('Você já tem este carimbo');return}S.visitas[selId]=hoje();save();render();$('det').hidden=true;toast('Carimbo conquistado: '+lugar(selId).n+' (check-in de demonstração)')},
+contribLugar:function(){$('det').hidden=true;window.irTela('contribuir');$('cLugar').value=selId},
+alt:function(b){document.querySelectorAll('.alt').forEach(function(x){x.classList.toggle('on',x===b);x.setAttribute('aria-pressed',x===b)});desenharRota(b.dataset.i)},
+usarRota:function(){$('rota').hidden=true;S.rota=1;save();render();if(rl&&map)map.fitBounds(rl.getBounds(),{padding:[60,60]});toast('Rota demonstrativa exibida no mapa')},
+share:function(b){var t='Conquistei no RECMAP: '+b.dataset.t;if(navigator.share)navigator.share({title:'RECMAP',text:t}).catch(function(){});else if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){toast('Texto copiado para compartilhar')});else toast('Compartilhamento indisponível neste navegador')},
+etapa:function(b){S.contribs.forEach(function(c){if(c.id==b.dataset.id)c.st=c.st==='pendente'?'em análise':'verificada'});save();render();toast('Status atualizado')},
+reset:function(){if(confirm('Apagar os dados salvos deste protótipo?')){try{localStorage.removeItem(K)}catch(e){}location.reload()}}};
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){document.querySelectorAll('.sheet').forEach(function(x){x.hidden=true});$('res').hidden=true}});
+document.addEventListener('click',function(e){if(!e.target.closest('.busca,#res'))$('res').hidden=true;var b=e.target.closest('[data-a]');if(b&&A[b.dataset.a]){A[b.dataset.a](b);return}
+b=e.target.closest('.chip[data-f]');if(b){S.f[b.dataset.f]=b.classList.contains('on')?1:0;save();desenhar();cartao();return}
+b=e.target.closest('[data-perfil]');if(b){var k=b.dataset.perfil,i=S.perfis.indexOf(k),on=b.getAttribute('aria-checked')!=='true';b.setAttribute('aria-checked',on);if(on&&i<0){S.perfis.push(k);efeitos()}if(!on&&i>-1)S.perfis.splice(i,1);save();syncUI();desenhar();render();return}
+b=e.target.closest('.chave[data-pref],.chave[data-modo]');if(b){S.sw[b.dataset.pref||b.dataset.modo]=b.getAttribute('aria-checked');save();return}
+b=e.target.closest('#segRitmo button');if(b){S.ritmo=b.dataset.v;save();return}
+b=e.target.closest('#segPref button');if(b){S.pref=b.dataset.v;save();render();return}
+b=e.target.closest('button[data-tema]');if(b){S.tema=b.dataset.tema;save();return}
+b=e.target.closest('#btnSalvar');if(b){S.nome=$('inNome').value.trim()||S.nome;S.cidade=$('inCidade').value.trim()||S.cidade;save();render();toast('Perfil atualizado')}});
+$('q').addEventListener('input',buscar);$('q').addEventListener('keydown',function(e){if(e.key==='Enter'){var f=$('res').querySelector('button[data-id]');if(f)f.click()}});
+$('btnLoc').addEventListener('click',function(){if(!navigator.geolocation){toast('Localização indisponível neste aparelho');return}navigator.geolocation.getCurrentPosition(function(g){S.pos=[g.coords.latitude,g.coords.longitude];if(map){if(mEu)map.removeLayer(mEu);mEu=L.marker(S.pos,{icon:ico('eu'),title:'Você está aqui'}).addTo(map);map.flyTo(S.pos,16)}toast('Localização atual encontrada')},function(){toast('Não foi possível obter sua localização. Verifique a permissão do navegador.')},{timeout:8000})});
+// contribuir
+$('cTipo').innerHTML=TP.map(function(t){return '<option value="'+t[0]+'">'+t[1]+'</option>'}).join('');
+$('cTipo').addEventListener('change',function(){$('cNomeW').hidden=this.value!=='cad';$('cLugar').parentNode.hidden=this.value==='cad'});
+$('cFoto').addEventListener('change',function(){var f=this.files[0];window.__foto=null;$('cPrev').hidden=true;if(!f)return;if(f.type.indexOf('image/')!==0||f.size>15e6){toast('Escolha uma imagem de até 15 MB');this.value='';return}reduzir(f,function(d){if(!d){toast('Não foi possível ler esta imagem');return}window.__foto=d;$('cPrev').src=d;$('cPrev').hidden=false})});
+$('cEnviar').addEventListener('click',function(){var t=$('cTipo').value,tx=$('cTexto').value.trim(),nome=$('cNome').value.trim();
+if(t==='cad'&&!nome){toast('Informe o nome do estabelecimento');$('cNome').focus();return}if(t!=='cad'&&!tx){toast('Escreva um comentário para enviar');$('cTexto').focus();return}
+var id='c'+Date.now(),pid=$('cLugar').value,c=map?map.getCenter():null,pos=S.pos||(c?[c.lat,c.lng]:P[0].a),f=window.__foto;
+if(t==='cad'){pid='n'+Date.now();S.novos.push({id:pid,n:nome,a:pos,e:'Endereço a confirmar (cadastrado por você)',t:'Novo local',c:'',f:{rampa:['d','d'],tatil:['d','d'],banheiro:['d','d'],elevador:['d','d']},porta:null,calc:null,av:0,dt:hoje(),cm:[]})}
+var lp=lugar(pid);if(t==='ava')(S.com[pid]=S.com[pid]||[]).push([S.nome,tx]);
+if(t==='obs'||t==='ramp'||t==='elev')S.obs.push({a:lp.a,t:({obs:'Obstáculo',ramp:'Rampa bloqueada',elev:'Elevador quebrado'}[t])+' em '+lp.n+': '+tx,com:1});
+S.contribs.push({id:id,p:pid,t:t,l:lp.n,tx:tx||'Fotografia anexada',st:'pendente',d:hoje()});var fm='';if(f){FT[id]=f;try{localStorage.setItem(KF,JSON.stringify(FT))}catch(e){delete FT[id];fm=' (sem espaço para a foto)'}}save();$('cTexto').value='';$('cNome').value='';$('cFoto').value='';window.__foto=null;$('cPrev').hidden=true;render();desenhar();toast('Contribuição salva neste aparelho. Status: pendente'+fm)});
+// onboarding
+var OBS=[['Encontre lugares acessíveis','Busque no mapa ou use os filtros de rampas, piso tátil e trechos acessíveis. Toque num local para ver os detalhes.'],['Use as rotas','Escolha origem e destino e compare rotas. As sugestões seguem os seus perfis de acessibilidade.'],['Conquiste carimbos','Visite lugares, faça check-in e complete as coleções do seu passaporte.'],['Suas preferências','Escolha os perfis que combinam com você. Você pode mudar depois.'],['Localização','Usamos sua localização só para mostrar onde você está no mapa.']],os=0;
+function rOnb(){var o=$('onb'),h='<h1>'+OBS[os][0]+'</h1><p>'+OBS[os][1]+'</p>';
+if(os===3)h+='<div class="grupo" style="margin-top:16px" id="obsPerfis">'+PF.map(function(p){return '<div class="item"><div class="txt"><b>'+p[1]+'</b></div><button class="chave" role="switch" aria-checked="'+(S.perfis.indexOf(p[0])>-1)+'" aria-label="Perfil: '+p[1]+'" data-perfil="'+p[0]+'" type="button"></button></div>'}).join('')+'</div>';
+h+='<div class="pts">'+OBS.map(function(x,i){return '<i class="'+(i<=os?'on':'')+'"></i>'}).join('')+'</div>';
+if(os===4)h+='<button class="btn" type="button" id="oLoc">Permitir localização</button><button class="btn sec" type="button" id="oFim">Agora não</button>';else h+='<button class="btn" type="button" id="oProx">Continuar</button>'+(os?'<button class="btn sec" type="button" id="oAnt">Voltar</button>':'<button class="btn sec" type="button" id="oPular">Pular</button>');o.innerHTML=h;
+var g=function(i,f){var e=$(i);if(e)e.onclick=f};g('oProx',function(){os++;rOnb()});g('oAnt',function(){os--;rOnb()});g('oPular',fim);g('oFim',fim);g('oLoc',function(){$('btnLoc').click();fim()})}
+function fim(){S.onb=1;save();syncUI();render();desenhar();cartao();window.irTela('mapa')}
+// init
+efeitosInit();function efeitosInit(){if(!localStorage.getItem(K)&&!S.onb){efeitos()}}
+var _ir=window.irTela;window.irTela=function(id){_ir(id);if(id==='mapa'&&map)setTimeout(function(){map.invalidateSize()},60)};
+$('alternar').addEventListener('click',function(){if(map)setTimeout(function(){map.invalidateSize()},80)});
+if(window.L){document.querySelector('.mapa-fundo:not(#lmap)').style.display='none';map=L.map('lmap',{zoomControl:false}).setView([-8.0631,-34.8711],15);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);gP=L.layerGroup().addTo(map);gO=L.layerGroup().addTo(map);gS=L.layerGroup().addTo(map);}
+var mq=matchMedia('(max-width:520px)');function modo(app){document.body.classList.toggle('app',app);if(app)document.body.classList.remove('quadro');$('modoApp').textContent=app?'Modo apresentação':'Modo aplicativo';if(map)setTimeout(function(){map.invalidateSize()},80)}
+modo(true);
+syncUI();render();desenhar();cartao();rOnb();if(!S.onb)window.irTela('onboarding');
+document.body.insertAdjacentHTML('beforeend','<div class="toast" id="toast" role="status" aria-live="polite"></div>');
+})();
+</script>
+</body>
+</html>
